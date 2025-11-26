@@ -1,105 +1,103 @@
 # linx-Line
 
-ステップ 1：VirtualBox をインストール
+1️⃣ QEMU / KVM のインストール（Ubuntu 24）
+sudo apt update
+sudo apt install -y qemu qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager ovmf
 
-sudo apt install virtualbox virtualbox-ext-pack
+virt-manager: GUI で仮想マシン作成可能
 
-ステップ 2：Genymotion Desktop の入手
+OVMF: UEFI 起動用
 
-公式サイト：
-https://www.genymotion.com/download/
+libvirt: QEMU/KVM 管理用デーモン
 
-Linux 版をダウンロード
+確認：
 
-ファイル名例：
+sudo systemctl enable --now libvirtd
+virsh list --all
 
-genymotion-3.6.0-linux_x64.bin
+2️⃣ ユーザーを KVM グループに追加
+sudo usermod -aG kvm $USER
+sudo usermod -aG libvirt $USER
 
-chmod +x genymotion-\*-linux_x64.bin
+一度ログアウト/再ログイン必須
 
-./genymotion-\*-linux_x64.bin
+3️⃣ Genymotion Desktop のインストール（QEMU モード）
 
-ステップ 3：Genymotion を起動してデバイスを作成
+Genymotion Desktop の Linux .bin をダウンロード
+https://www.genymotion.com/download/desktop/
 
-Genymotion Desktop を起動
+（Linux x64 版）
 
-「Add」を押す
+chmod +x genymotion-_-linux_x64.bin
+./genymotion-_-linux_x64.bin
 
-以下の Android イメージを選択：
+インストール先は ~/genymotion など自由
 
-🎯 推奨イメージ
-⭐ Android 10.0 (API 29)
+Genymotion を起動
 
-→ LINE の QR 読み取りが最も安定する
+~/genymotion/genymotion
 
-または
+初回セットアップ時に QEMU モードを選択
 
-⭐ Android 11.0 (API 30)
+「Use VirtualBox?」ではなく、「Use QEMU/KVM」を選ぶ
 
-→ 新しいが多少重いだけで安定
+VirtualBox Extension Pack を必要としないので商用利用でも問題なし
 
-🧰 ステップ 4：設定（最重要：Camera passthrough）
+4️⃣ Android 仮想デバイス作成
 
-作成した仮想デバイスを選択 → Settings を押す。
+Genymotion の「Add」ボタンで Android 10 / 11 イメージを選択
 
-🔸 CPU / RAM
-CPU: 2〜4 core
-RAM: 2048〜4096MB
+推奨設定：
 
-📷 最重要：Camera 設定
+CPU: 2 cores
 
-Genymotion の設定で：
+RAM: 2048〜4096 MB
 
-Camera → Webcam passthrough → /dev/video0（あなたの Web カメラ）
+Storage: 8〜16 GB
 
-これを必ず選択。
+GPU: Hardware/OpenGL acceleration 有効
 
-📌 Genymotion は VirtualBox 経由でカメラを直接 Android に渡すため、LINE の QR 画面も落ちない。
+5️⃣ カメラのパススルー設定（QR 読み取り用）
 
-🧩 ステップ 5：Google Apps (GApps) を有効化
+QEMU モードでは Webcam を v4l2-passthrough で Android に渡す
 
-LINE を使うなら Play ストアが必要。
+設定例（QEMU コマンドの場合）：
 
-Genymotion の右上にある
-Open GAPPS アイコン（ダウンロードの雲アイコン）
-を押すだけで自動インストールされる。
+-device usb-ehci,id=usb \
+-device usb-host,hostbus=1,hostaddr=2 # /dev/video0 をパススルー
 
-🧱 ステップ 6：LINE をインストール
+virt-manager の GUI でも「Add Hardware → USB Device → host webcam」を選択可能
 
-Play ストア → LINE をインストール
+Android 側で Open Camera 等でカメラ確認
 
-🎥 ステップ 7：LINE の QR 読み取りをテスト
+6️⃣ Google Play ストア / LINE インストール
 
-PC 版 LINE を開いて QR ログイン画面を出す
+Genymotion の「Open GApps」ボタンで Play ストア導入
 
-Genymotion 内の LINE → QR ログイン
+Play ストアから LINE をインストール
 
-カメラが起動して PC 画面が映る
+7️⃣ LINE QR ログインテスト
 
-QR 解析が成功すると
-　 PC 版 LINE がログインされる
+PC 版 LINE を開き QR ログイン画面を表示
 
-Waydroid とは違い、クラッシュしません。
+仮想 Android 内 LINE を起動 → 「QR コード読み取り」
 
-🔒 Step 8（重要）
-PC 版 LINE にログインできたら
+カメラ経由で読み取り成功 → PC 版 LINE がログイン
 
-スマホ（Genymotion）はもう不要
+8️⃣ メリット
 
-再ログイン時もスマホ不要
+VirtualBox Extension Pack 不要 → 商用ライセンス問題なし
 
-本人確認コードも不要
+QEMU/KVM + Genymotion で LINE QR 読み取りが安定
 
-QR も不要
+Linux 24 で完全に完結
 
-PC 版 LINE 単体で使い続けられる。
+⚠️ 注意点
 
-🎉 まとめ：Genymotion の構成（最強安定版）
-項目 推奨値
-Genymotion Version 3.5〜3.6
-Android Version 10 or 11
-CPU 2〜4 core
-RAM 2〜4GB
-Camera mode Webcam passthrough
-VirtualBox 6 or 7
-GApps Open GApps ボタンで自動
+QEMU の場合、USB カメラが複数台あると lsusb で正しい bus/addr を確認して割り当てる必要あり
+
+OpenGL ハードウェアアクセラレーションが有効でないと LINE がクラッシュすることあり
+
+仮想デバイスは最低でも 2GB RAM + 2 CPU 推奨
+
+💡 ここまで準備できれば、LINE の QR 読み取り専用 Linux 端末が完成します。
