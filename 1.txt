@@ -1,0 +1,50 @@
+Webカメラが /dev/video0 に認識されていること
+
+確認：
+
+ls /dev/video*
+# 例: /dev/video0
+
+1. 必要なパッケージをインストール
+
+Waydroidのカメラ対応には v4l2loopback が便利です。
+
+sudo apt update
+sudo apt install -y v4l2loopback-dkms v4l-utils
+
+
+v4l2loopback：仮想カメラデバイスを作るモジュール
+
+v4l-utils：カメラ情報の確認用
+
+2. 仮想カメラデバイスを作成
+sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="WaydroidCam" exclusive_caps=1
+
+
+/dev/video10 が作成される
+
+Linuxの物理カメラをこの仮想カメラに渡す準備をする場合は次のようにする：
+
+# 物理カメラの映像を仮想カメラにループバック
+ffmpeg -f v4l2 -i /dev/video0 -vcodec rawvideo -pix_fmt yuv420p -f v4l2 /dev/video10
+
+
+このコマンドはリアルタイムでWebカメラ映像を /dev/video10 に出力します。
+
+3. Waydroidのカメラアクセスを許可
+
+Waydroidは /dev/video* を直接参照します。
+権限が足りない場合は plugdev にユーザーを追加：
+
+sudo usermod -aG plugdev $USER
+# 追加後、ログアウト→再ログイン
+
+
+Waydroidサービスを再起動：
+
+sudo systemctl restart waydroid-container
+
+4. Waydroid内でカメラデバイス確認
+waydroid shell
+ls /dev/video*
+# /dev/video10 が見えればOK
